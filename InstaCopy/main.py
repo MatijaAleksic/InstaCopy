@@ -8,20 +8,36 @@ from PIL import Image
 
 import clipboard
 
+from pystray import MenuItem as item
+import pystray
+
+import threading
+
+ctypes.windll.shcore.SetProcessDpiAwareness(2)
+
 class InstaCopy():
     def __init__(self):
+
+
+        self.master = Tk(className='InstantCopy')
 
         self.selectedPoint = None
         self.rect = None
         self.img_name = None
 
-        # pronalazenje rezolucije ekrana
-        [self.width, self.height] = get_resolution()
+        self.ico = Image.open("image.ico")
+        self.taskbar_process = None
 
-        # podesavanje main window-a
-        self.master = Tk(className='InstaCopy')
+        # pronalazenje rezolucije ekrana
+        (self.width, self.height) = get_resolution()
+
+        print(f"width = {self.width}, height = {self.height}")
+
         # drugi window
         self.select_window = Canvas(self.master, width=self.width, height=self.height, bg='red')
+
+        #self.master.config(width=self.width, height=self.height)
+        #self.select_window.config(width=200, height=200)
 
     def run(self):
         # podesavanje fullscreena
@@ -33,8 +49,6 @@ class InstaCopy():
         # bindujemo escape za izlazak
         self.master.bind('<Escape>', self.close)
 
-        # dodavanje background frame koji ce da cita sta se desava na ekranu
-
         # events
         self.select_window.bind('<B1-Motion>', self.motion)  # da se binduje za motion ovaj frame
         self.select_window.bind('<Button>', self.first_click)
@@ -42,32 +56,37 @@ class InstaCopy():
 
         self.select_window.pack()
 
-        # master.withdraw()
-        mainloop()
+        #self.master.withdraw()
 
+        menu=(item('Quit', self.close), item('Show', self.show_window))
+        self.taskbar_process=pystray.Icon("name", self.ico, "title", menu)
+        self.taskbar_process.run()
+
+        self.master.mainloop()
+
+
+    def show_window(self):
+        self.taskbar_process.stop()
+        self.master.after(0,self.master.deiconify())
+
+    def close(self):
+        #self.master.destroy()  # if you want to bring it back
+        #self.taskbar_process.stop()
+        #self.master.quit()
+
+        self.master.withdraw()
+        self.taskbar_process.run()
+
+
+
+
+#EVENTI
     # funcija eventa za pracenje pomeranje misa
     def motion(self, event):
-        #print("Mouse position: (%s %s)" % (event.x, event.y))
+        print("Mouse position: (%s %s)" % (event.x, event.y))
         if self.selectedPoint is not None:
             self.select_window.coords(self.rect, self.selectedPoint[0], self.selectedPoint[1], event.x, event.y)
         return
-
-    def close(self, event):
-        try:
-            #self.select_window = None
-            self.master.withdraw()  # if you want to bring it back
-            sys.exit()  # if you want to exit the entire thing
-        except Exception as e:
-            print(e)
-
-    def take_screenshot(self, point1, point2):
-        #print(point1, point2)
-        image_name = "Screenshot.jpg"
-        im = grab(bbox=(point1[0], point1[1], point2[0], point2[1]))
-        im.save(image_name)
-        return image_name
-
-
 
     def first_click(self, event):
         #print("Mouse position: (%s %s)" % (event.x, event.y))
@@ -77,23 +96,12 @@ class InstaCopy():
 
     def release(self, event):
         screen_shot_rectangle = [self.selectedPoint[0], self.selectedPoint[1], event.x, event.y]
+
         #print(f"{screen_shot_rectangle[0]} {screen_shot_rectangle[1]} {screen_shot_rectangle[2]} {screen_shot_rectangle[3]} ")
 
-        if screen_shot_rectangle[0] > screen_shot_rectangle[2]:
-            temp = screen_shot_rectangle[0]
-            screen_shot_rectangle[0] = screen_shot_rectangle[2]
-            screen_shot_rectangle[2] = temp
+        (screen_shot_rectangle[0], screen_shot_rectangle[1], screen_shot_rectangle[2], screen_shot_rectangle[3]) =  \
+        rearange_points(screen_shot_rectangle[0], screen_shot_rectangle[1], screen_shot_rectangle[2], screen_shot_rectangle[3])
 
-        elif screen_shot_rectangle[0] == screen_shot_rectangle[2]:
-            screen_shot_rectangle[2] += 1
-
-        if screen_shot_rectangle[1] > screen_shot_rectangle[3]:
-            temp = screen_shot_rectangle[1]
-            screen_shot_rectangle[1] = screen_shot_rectangle[3]
-            screen_shot_rectangle[3] = temp
-
-        elif screen_shot_rectangle[1] == screen_shot_rectangle[3]:
-            screen_shot_rectangle[3] += 1
 
         self.select_window.delete(self.rect)
         #self.image_name = self.take_screenshot([screen_shot_rectangle[0],screen_shot_rectangle[1]], [screen_shot_rectangle[2],screen_shot_rectangle[3]])
@@ -103,6 +111,15 @@ class InstaCopy():
         self.rect = None
         return
 
+    def take_screenshot(self, point1, point2):
+        #print(point1, point2)
+        image_name = "Screenshot.jpg"
+        im = grab(bbox=(point1[0], point1[1], point2[0], point2[1]))
+        im.save(image_name)
+        return image_name
+
+
+#Teseract ocr screen text translate
     def copy_text(self, image_name):
         tess.pytesseract.tesseract_cmd = r'C:\Program Files\Tesseract-OCR\tesseract.exe'
 
@@ -112,13 +129,8 @@ class InstaCopy():
 
         clipboard.copy(text[:-1])
         print(text)
+        self.master.withdraw()
         del img
-        #self.close()
-
-
-def winEnumHandler( hwnd, ctx ):
-    if win32gui.IsWindowVisible( hwnd ):
-        print (hex(hwnd), win32gui.GetWindowText( hwnd ))
 
 
 InstaCopy().run()
