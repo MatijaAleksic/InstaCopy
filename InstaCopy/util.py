@@ -39,3 +39,4 @@ def take_screenshot2(point1, point2):
 
     except Exception as e:
         print(e)
+
