@@ -4,15 +4,17 @@ import win32gui
 import win32ui
 import win32con
 
+#from pyscreenshot import grab
+
 def get_resolution():
     user32 = ctypes.windll.user32
     user32.SetProcessDPIAware()
     return user32.GetSystemMetrics(0), user32.GetSystemMetrics(1)
 
 
-def take_screenshot2(point1, point2):
+def take_screenshot(image_name, point1, point2):
     try:
-        bmpfilenamename = "out.bmp" #set this
+        bmpfilenamename = image_name #set this
 
         hwnd = win32gui.FindWindow(None, "master")
 
@@ -34,8 +36,6 @@ def take_screenshot2(point1, point2):
         return bmpfilenamename
 
         #win32gui.PostMessage(hwnd,win32con.WM_CLOSE,0,0)
-
-
 
     except Exception as e:
         print(e)
@@ -59,3 +59,11 @@ def rearange_points(x1, y1 , x2, y2):
         y2 += 1
 
     return x1, y1, x2, y2
+
+
+# def take_screenshot(self, point1, point2):
+#     #print(point1, point2)
+#     image_name = "Screenshot1.jpg"
+#     im = grab(bbox=(point1[0], point1[1], point2[0], point2[1]))
+#     im.save(image_name)
+#     return image_name
